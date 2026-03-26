@@ -1,17 +1,17 @@
 {
-  hjemModule,
-  hjemTest,
+  baytModule,
+  baytTest,
   hello,
   lib,
   formats,
 }: let
   userHome = "/home/alice";
 in
-  hjemTest {
-    name = "hjem-basic";
+  baytTest {
+    name = "bayt-basic";
     nodes = {
       node1 = {
-        imports = [hjemModule];
+        imports = [baytModule];
 
         users.groups.alice = {};
         users.users.alice = {
@@ -20,8 +20,8 @@ in
           password = "";
         };
 
-        hjem.linker = null;
-        hjem.users = {
+        bayt.linker = null;
+        bayt.users = {
           alice = {
             enable = true;
             packages = [hello];
@@ -60,7 +60,7 @@ in
       machine.succeed("loginctl enable-linger alice")
       machine.wait_until_succeeds("systemctl --user --machine=alice@ is-active systemd-tmpfiles-setup.service")
 
-      # Test file created by Hjem
+      # Test file created by Bayt
       machine.succeed("[ -L ~alice/.config/foo ]")
       machine.succeed("[ -L ~alice/.config/bar.json ]")
       machine.succeed("[ -L ~alice/.config/baz.toml ]")

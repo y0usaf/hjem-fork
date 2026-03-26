@@ -1,6 +1,6 @@
 {
   config,
-  hjem-lib,
+  bayt-lib,
   lib,
   options,
   pkgs,
@@ -8,7 +8,7 @@
   ...
 }: let
   inherit (builtins) attrNames attrValues concatLists concatMap concatStringsSep filter mapAttrs toJSON typeOf;
-  inherit (hjem-lib) fileToJson;
+  inherit (bayt-lib) fileToJson;
   inherit (lib.attrsets) filterAttrs optionalAttrs;
   inherit (lib.modules) importApply mkDefault mkIf mkMerge;
   inherit (lib.strings) optionalString;
@@ -18,7 +18,7 @@
 
   osConfig = config;
 
-  cfg = config.hjem;
+  cfg = config.bayt;
   _class = "nixos";
 
   enabledUsers = filterAttrs (_: u: u.enable) cfg.users;
@@ -62,17 +62,17 @@
   in
     pkgs.symlinkJoin
     {
-      name = "hjem-manifests";
+      name = "bayt-manifests";
       paths = map writeManifest (attrNames enabledUsers);
     };
 
-  hjemSubmodule = submoduleWith {
-    description = "Hjem submodule for NixOS";
-    class = "hjem";
+  baytSubmodule = submoduleWith {
+    description = "Bayt submodule for NixOS";
+    class = "bayt";
     specialArgs =
       cfg.specialArgs
       // {
-        inherit hjem-lib osConfig pkgs utils;
+        inherit bayt-lib osConfig pkgs utils;
         osOptions = options;
       };
     modules =
@@ -91,7 +91,7 @@
             assertions = [
               {
                 assertion = config.enable -> user.enable;
-                message = "Enabled Hjem user '${name}' must also be configured and enabled in NixOS.";
+                message = "Enabled Bayt user '${name}' must also be configured and enabled in NixOS.";
               }
             ];
 
@@ -100,8 +100,8 @@
             clobberFiles = mkDefault cfg.clobberByDefault;
           })
         ]
-        # Evaluate additional modules under 'hjem.users.<username>' so that
-        # module systems built on Hjem are more ergonomic.
+        # Evaluate additional modules under 'bayt.users.<username>' so that
+        # module systems built on Bayt are more ergonomic.
         cfg.extraModules
       ];
   };
@@ -109,7 +109,7 @@ in {
   inherit _class;
 
   imports = [
-    (importApply ../common/top-level.nix {inherit hjemSubmodule _class;})
+    (importApply ../common/top-level.nix {inherit baytSubmodule _class;})
   ];
 
   config = mkMerge [
@@ -134,42 +134,42 @@ in {
 
     (mkIf (cfg.linker != null) {
       /*
-      The different Hjem services expect the manifest to be generated under `/var/lib/hjem/manifest-{user}.json`.
+      The different Bayt services expect the manifest to be generated under `/var/lib/bayt/manifest-{user}.json`.
       */
-      systemd.targets.hjem = {
-        description = "Hjem File Management";
+      systemd.targets.bayt = {
+        description = "Bayt File Management";
         after = ["local-fs.target"];
         wantedBy = ["sysinit-reactivation.target" "multi-user.target"];
         before = ["sysinit-reactivation.target"];
         requires = let
           requiredUserServices = name: [
-            "hjem-activate@${name}.service"
-            "hjem-copy@${name}.service"
+            "bayt-activate@${name}.service"
+            "bayt-copy@${name}.service"
           ];
         in
           concatMap requiredUserServices (attrNames enabledUsers)
-          ++ ["hjem-cleanup.service"];
+          ++ ["bayt-cleanup.service"];
       };
 
       systemd.services = let
-        oldManifests = "/var/lib/hjem";
+        oldManifests = "/var/lib/bayt";
         checkEnabledUsers = ''
           case "$1" in
             ${concatStringsSep "|" (attrNames enabledUsers)}) ;;
-            *) echo "User '%i' is not configured for Hjem" >&2; exit 0 ;;
+            *) echo "User '%i' is not configured for Bayt" >&2; exit 0 ;;
           esac
         '';
       in
         optionalAttrs (enabledUsers != {}) {
-          hjem-prepare = {
-            description = "Prepare Hjem manifests directory";
+          bayt-prepare = {
+            description = "Prepare Bayt manifests directory";
             enableStrictShellChecks = true;
             script = "mkdir -p ${oldManifests}";
             serviceConfig.Type = "oneshot";
             unitConfig.RefuseManualStart = true;
           };
 
-          "hjem-activate@" = {
+          "bayt-activate@" = {
             description = "Link files for %i from their manifest";
             enableStrictShellChecks = true;
             serviceConfig = {
@@ -177,10 +177,10 @@ in {
               Type = "oneshot";
             };
             requires = [
-              "hjem-prepare.service"
-              "hjem-copy@%i.service"
+              "bayt-prepare.service"
+              "bayt-copy@%i.service"
             ];
-            after = ["hjem-prepare.service"];
+            after = ["bayt-prepare.service"];
             scriptArgs = "%i";
             script = let
               linkerOpts =
@@ -201,17 +201,17 @@ in {
             '';
           };
 
-          "hjem-copy@" = {
-            description = "Copy the manifest into Hjem's state directory for %i";
+          "bayt-copy@" = {
+            description = "Copy the manifest into Bayt's state directory for %i";
             enableStrictShellChecks = true;
             serviceConfig.Type = "oneshot";
-            after = ["hjem-activate@%i.service"];
+            after = ["bayt-activate@%i.service"];
             scriptArgs = "%i";
             /*
             TODO: remove the if condition in a while, this is in place because the first iteration of the
-            manifest used to simply point /var/lib/hjem to the aggregate symlinkJoin directory. Since
+            manifest used to simply point /var/lib/bayt to the aggregate symlinkJoin directory. Since
             per-user manifest services have now been implemented, trying to copy singular files into
-            /var/lib/hjem will fail if the user was using the previous manifest handling.
+            /var/lib/bayt will fail if the user was using the previous manifest handling.
             */
             script = ''
               ${checkEnabledUsers}
@@ -230,11 +230,11 @@ in {
             '';
           };
 
-          hjem-cleanup = {
+          bayt-cleanup = {
             description = "Cleanup disabled users' manifests";
             enableStrictShellChecks = true;
             serviceConfig.Type = "oneshot";
-            after = ["hjem.target"];
+            after = ["bayt.target"];
             unitConfig.RefuseManualStart = false;
             script = let
               manifestsToDelete =

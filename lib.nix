@@ -30,7 +30,7 @@ in rec {
       else true);
 
   # inlined from https://github.com/NixOS/nixpkgs/tree/master/nixos/modules/config/shells-environment.nix
-  # using osOptions precludes using hjem (or this type) standalone
+  # using osOptions precludes using bayt (or this type) standalone
   envVarType = attrsOf (nullOr (oneOf [(listOf (oneOf [int str path])) int str path]));
 
   listOrSingletonOf = type: coercedTo (either (listOf type) type) toList (listOf type);

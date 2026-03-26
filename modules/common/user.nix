@@ -1,17 +1,17 @@
-# The common module that contains Hjem's per-user options. To ensure Hjem remains
+# The common module that contains Bayt's per-user options. To ensure Bayt remains
 # somewhat compliant with cross-platform paradigms (e.g. NixOS or Darwin.) Platform
 # specific options such as nixpkgs module system or nix-darwin module system should
 # be avoided here.
 {
   config,
-  hjem-lib,
+  bayt-lib,
   lib,
   name,
   options,
   pkgs,
   ...
 }: let
-  inherit (hjem-lib) envVarType listOrSingletonOf toEnv;
+  inherit (bayt-lib) envVarType listOrSingletonOf toEnv;
   inherit (lib.attrsets) attrValues mapAttrs mapAttrsToList;
   inherit (lib.lists) any;
   inherit (lib.modules) mkIf;
@@ -23,15 +23,15 @@
   cfg = config;
   fileTypeRelativeTo' = rootDir:
     attrsWith {
-      elemType = hjem-lib.fileTypeRelativeTo {
+      elemType = bayt-lib.fileTypeRelativeTo {
         inherit rootDir;
         clobberDefault = cfg.clobberFiles;
-        clobberDefaultText = literalExpression "config.hjem.users.${name}.clobberFiles";
+        clobberDefaultText = literalExpression "config.bayt.users.${name}.clobberFiles";
       };
       placeholder = "path";
     };
 in {
-  _class = "hjem";
+  _class = "bayt";
 
   imports = [
     # Makes "assertions" option available without having to duplicate the work
@@ -56,7 +56,7 @@ in {
       type = passwdEntry path;
       description = ''
         The home directory for the user, to which files configured in
-        {option}`hjem.users.<username>.files` will be relative to by default.
+        {option}`bayt.users.<username>.files` will be relative to by default.
       '';
     };
 
@@ -64,12 +64,12 @@ in {
       type = bool;
       example = true;
       description = ''
-        The default override behaviour for files managed by Hjem for a
+        The default override behaviour for files managed by Bayt for a
         particular user.
 
-        A top level option exists under the Hjem module option
-        {option}`hjem.clobberByDefault`. Per-file behaviour can be modified
-        with {option}`hjem.users.<username>.files.<path>.clobber`.
+        A top level option exists under the Bayt module option
+        {option}`bayt.clobberByDefault`. Per-file behaviour can be modified
+        with {option}`bayt.users.<username>.files.<path>.clobber`.
       '';
     };
 
@@ -77,7 +77,7 @@ in {
       default = {};
       type = fileTypeRelativeTo' cfg.directory;
       example = {".config/foo.txt".source = "Hello World";};
-      description = "Hjem-managed files.";
+      description = "Bayt-managed files.";
     };
 
     xdg = {
@@ -88,7 +88,7 @@ in {
           defaultText = "$HOME/.cache";
           description = ''
             The XDG cache directory for the user, to which files configured in
-            {option}`hjem.users.<username>.xdg.cache.files` will be relative to by default.
+            {option}`bayt.users.<username>.xdg.cache.files` will be relative to by default.
 
             Adds {env}`XDG_CACHE_HOME` to {option}`environment.sessionVariables` for
             this user if changed.
@@ -98,7 +98,7 @@ in {
           default = {};
           type = fileTypeRelativeTo' cfg.xdg.cache.directory;
           example = {"foo.txt".source = "Hello World";};
-          description = "Hjem-managed cache files.";
+          description = "Bayt-managed cache files.";
         };
       };
 
@@ -109,7 +109,7 @@ in {
           defaultText = "$HOME/.config";
           description = ''
             The XDG config directory for the user, to which files configured in
-            {option}`hjem.users.<username>.xdg.config.files` will be relative to by default.
+            {option}`bayt.users.<username>.xdg.config.files` will be relative to by default.
 
             Adds {env}`XDG_CONFIG_HOME` to {option}`environment.sessionVariables` for
             this user if changed.
@@ -119,7 +119,7 @@ in {
           default = {};
           type = fileTypeRelativeTo' cfg.xdg.config.directory;
           example = {"foo.txt".source = "Hello World";};
-          description = "Hjem-managed config files.";
+          description = "Bayt-managed config files.";
         };
       };
 
@@ -130,7 +130,7 @@ in {
           defaultText = "$HOME/.local/share";
           description = ''
             The XDG data directory for the user, to which files configured in
-            {option}`hjem.users.<username>.xdg.data.files` will be relative to by default.
+            {option}`bayt.users.<username>.xdg.data.files` will be relative to by default.
 
             Adds {env}`XDG_DATA_HOME` to {option}`environment.sessionVariables` for
             this user if changed.
@@ -140,7 +140,7 @@ in {
           default = {};
           type = fileTypeRelativeTo' cfg.xdg.data.directory;
           example = {"foo.txt".source = "Hello World";};
-          description = "Hjem-managed data files.";
+          description = "Bayt-managed data files.";
         };
       };
 
@@ -151,7 +151,7 @@ in {
           defaultText = "$HOME/.local/state";
           description = ''
             The XDG state directory for the user, to which files configured in
-            {option}`hjem.users.<username>.xdg.state.files` will be relative to by default.
+            {option}`bayt.users.<username>.xdg.state.files` will be relative to by default.
 
             Adds {env}`XDG_STATE_HOME` to {option}`environment.sessionVariables` for
             this user if changed.
@@ -161,7 +161,7 @@ in {
           default = {};
           type = fileTypeRelativeTo' cfg.xdg.state.directory;
           example = {"foo.txt".source = "Hello World";};
-          description = "Hjem-managed state files.";
+          description = "Bayt-managed state files.";
         };
       };
 
@@ -224,7 +224,7 @@ in {
         description = ''
           A POSIX compliant shell script containing the user session variables needed to bootstrap the session.
 
-          As there is no reliable and agnostic way of setting session variables, Hjem's
+          As there is no reliable and agnostic way of setting session variables, Bayt's
           environment module does nothing by itself. Rather, it provides a POSIX compliant shell script
           that needs to be sourced where needed.
         '';

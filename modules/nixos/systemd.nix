@@ -34,7 +34,7 @@ in {
     ]
     // {
       enable =
-        mkEnableOption "Hjem management of systemd units"
+        mkEnableOption "Bayt management of systemd units"
         // {
           default = true;
           example = false;

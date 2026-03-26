@@ -1,16 +1,16 @@
 {
-  hjemModule,
-  hjemTest,
+  baytModule,
+  baytTest,
   smfh,
 }: let
   user = "alice";
   userHome = "/home/${user}";
 in
-  hjemTest {
-    name = "hjem-linker";
+  baytTest {
+    name = "bayt-linker";
     nodes = {
       node1 = {
-        imports = [hjemModule];
+        imports = [baytModule];
 
         # ensure nixless deployments work
         nix.enable = false;
@@ -22,7 +22,7 @@ in
           password = "";
         };
 
-        hjem = {
+        bayt = {
           linker = smfh;
           users = {
             ${user} = {
@@ -33,18 +33,18 @@ in
 
         specialisation = {
           fileGetsLinked.configuration = {
-            hjem.users.${user}.files.".config/foo".text = "Hello world!";
+            bayt.users.${user}.files.".config/foo".text = "Hello world!";
           };
 
           fileGetsOverwritten.configuration = {
-            hjem.users.${user}.files.".config/foo" = {
+            bayt.users.${user}.files.".config/foo" = {
               text = "Hello new world!";
               clobber = true;
             };
           };
 
           variousFileTypes.configuration = {
-            hjem.users.${user}.files = {
+            bayt.users.${user}.files = {
               foo = {
                 type = "copy";
                 text = ''
@@ -79,7 +79,7 @@ in
 
       with subtest("Manifest gets created"):
         node1.succeed("${baseSystem}/bin/switch-to-configuration test")
-        node1.succeed("[ -f /var/lib/hjem/manifest-${user}.json ]")
+        node1.succeed("[ -f /var/lib/bayt/manifest-${user}.json ]")
 
       with subtest("File gets linked"):
         node1.succeed("${specialisations}/fileGetsLinked/bin/switch-to-configuration test")

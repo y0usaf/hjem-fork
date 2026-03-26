@@ -1,16 +1,16 @@
 {
-  hjemModule,
-  hjemTest,
+  baytModule,
+  baytTest,
   smfh,
 }: let
   user = "alice";
   userHome = "/home/${user}";
 in
-  hjemTest {
-    name = "hjem-no-users-linker";
+  baytTest {
+    name = "bayt-no-users-linker";
     nodes = {
       node1 = {
-        imports = [hjemModule];
+        imports = [baytModule];
 
         # ensure nixless deployments work
         nix.enable = false;
@@ -22,7 +22,7 @@ in
           password = "";
         };
 
-        hjem = {
+        bayt = {
           linker = smfh;
           users = {
             ${user} = {

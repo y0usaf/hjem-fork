@@ -1,6 +1,6 @@
 {
-  hjemModule,
-  hjemTest,
+  baytModule,
+  baytTest,
   lib,
   formats,
   smfh,
@@ -8,8 +8,8 @@
 }: let
   userHome = "/home/alice";
 in
-  hjemTest {
-    name = "hjem-xdg-linker";
+  baytTest {
+    name = "bayt-xdg-linker";
     nodes = {
       node1 = let
         inherit (lib.modules) mkIf;
@@ -59,7 +59,7 @@ in
           };
         };
       in {
-        imports = [hjemModule];
+        imports = [baytModule];
 
         # ensure nixless deployments work
         nix.enable = false;
@@ -71,7 +71,7 @@ in
           password = "";
         };
 
-        hjem = {
+        bayt = {
           linker = smfh;
           users = {
             alice = {
@@ -82,7 +82,7 @@ in
 
         specialisation = {
           defaultFilesGetLinked.configuration = {
-            hjem.users.alice = {
+            bayt.users.alice = {
               xdg = xdg {
                 clobber = false;
                 altLocation = false;
@@ -90,7 +90,7 @@ in
             };
           };
           altFilesGetLinked.configuration = {
-            hjem.users.alice = {
+            bayt.users.alice = {
               files.".config/foo".text = "Hello world!";
               xdg = xdg {
                 clobber = false;
@@ -99,7 +99,7 @@ in
             };
           };
           altFilesGetOverwritten.configuration = {
-            hjem.users.alice = {
+            bayt.users.alice = {
               files.".config/foo" = {
                 text = "Hello new world!";
                 clobber = true;

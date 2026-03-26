@@ -19,7 +19,7 @@
 
 [LICENSE]: ../LICENSE
 
-We are glad you are thinking about contributing to Hjem! The project is largely
+We are glad you are thinking about contributing to Bayt! The project is largely
 shaped by contributors and user feedback, and all contributions are appreciated.
 
 If you are unsure about anything, whether a change is necessary or if it would
@@ -37,13 +37,13 @@ Discussions tab is also available for less formal discussions.
 
 ## Contributing
 
-Anything that benefits all Hjem users are eligible for inclusion. If you have a
+Anything that benefits all Bayt users are eligible for inclusion. If you have a
 really good idea that you think everyone would appreciate, then let's discuss!
 
 ### General Guidelines
 
 There are several guidelines we expect you to adhere to while making a pull
-request to Hjem. Namely, we expect you to:
+request to Bayt. Namely, we expect you to:
 
 1. Write clean Nix code
 2. Self-test your changes, and write integration tests where applicable
@@ -123,13 +123,13 @@ would be necessary.
 
 ## Code of Conduct
 
-Hjem does not have a formal Code of Conduct yet, and we are sincerely hoping
+Bayt does not have a formal Code of Conduct yet, and we are sincerely hoping
 that we will ever need one. This project is not expected to be a hotbed of
 activity, and you should be perfectly capable of keeping it civil and
 respectful.
 
-That said, everyone who partakes around Hjem and Hjem-adjacent communities or
-contributes to Hjem must be allowed to feel welcome and safe. As such, any
+That said, everyone who partakes around Bayt and Bayt-adjacent communities or
+contributes to Bayt must be allowed to feel welcome and safe. As such, any
 parties that disrupt the project or engage in negative behaviour will be dealt
 with swiftly and appropriately. You are invited to share any concerns that you
 have with the projects moderation, be it over public or public spaces.

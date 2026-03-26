@@ -1,16 +1,16 @@
 rec {
-  hjem = {
+  bayt = {
     imports = [
-      hjem-lib
+      bayt-lib
       ./base.nix
     ];
   };
-  hjem-lib = {
+  bayt-lib = {
     lib,
     pkgs,
     ...
   }: {
-    _module.args.hjem-lib = import ../../lib.nix {inherit lib pkgs;};
+    _module.args.bayt-lib = import ../../lib.nix {inherit lib pkgs;};
   };
-  default = hjem;
+  default = bayt;
 }

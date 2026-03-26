@@ -2,7 +2,7 @@
 #file_string: #path_string & =~ "[^/]$"
 #octal_string: string & =~ "^[0-7]{3,4}$"
 
-#HjemFile: {
+#BaytFile: {
 	type!: string
 	source?: #path_string
 	target!: #path_string
@@ -33,5 +33,5 @@
 
 close({
 	version: 2
-	files: [...#HjemFile]
+	files: [...#BaytFile]
 })

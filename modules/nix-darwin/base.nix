@@ -1,13 +1,13 @@
 {
   config,
-  hjem-lib,
+  bayt-lib,
   lib,
   options,
   pkgs,
   ...
 }: let
   inherit (builtins) attrNames attrValues concatLists concatMap filter getAttr head isAttrs toJSON;
-  inherit (hjem-lib) fileToJson;
+  inherit (bayt-lib) fileToJson;
   inherit (lib.attrsets) filterAttrs;
   inherit (lib.meta) getExe getExe';
   inherit (lib.modules) importApply mkAfter mkDefault;
@@ -15,7 +15,7 @@
   inherit (lib.trivial) flip pipe;
   inherit (lib.types) submoduleWith;
 
-  cfg = config.hjem;
+  cfg = config.bayt;
   _class = "darwin";
 
   enabledUsers = filterAttrs (_: u: u.enable) cfg.users;
@@ -58,17 +58,17 @@
   in
     pkgs.symlinkJoin
     {
-      name = "hjem-manifests";
+      name = "bayt-manifests";
       paths = map writeManifest (attrNames enabledUsers);
     };
 
-  hjemSubmodule = submoduleWith {
-    description = "Hjem submodule for nix-darwin";
-    class = "hjem";
+  baytSubmodule = submoduleWith {
+    description = "Bayt submodule for nix-darwin";
+    class = "bayt";
     specialArgs =
       cfg.specialArgs
       // {
-        inherit hjem-lib pkgs;
+        inherit bayt-lib pkgs;
         osConfig = config;
         osOptions = options;
       };
@@ -85,8 +85,8 @@
             clobberFiles = mkDefault cfg.clobberByDefault;
           })
         ]
-        # Evaluate additional modules under 'hjem.users.<username>' so that
-        # module systems built on Hjem are more ergonomic.
+        # Evaluate additional modules under 'bayt.users.<username>' so that
+        # module systems built on Bayt are more ergonomic.
         cfg.extraModules
       ];
   };
@@ -101,7 +101,7 @@
   argsStr = escapeShellArgs linkerArgs;
 in {
   imports = [
-    (importApply ../common/top-level.nix {inherit hjemSubmodule _class;})
+    (importApply ../common/top-level.nix {inherit baytSubmodule _class;})
   ];
 
   config = {
@@ -112,10 +112,10 @@ in {
     # launchd agent to apply/diff the manifest per logged-in user
     # https://github.com/nix-darwin/nix-darwin/issues/871#issuecomment-2340443820
     launchd.user.agents = {
-      hjem-activate = {
+      bayt-activate = {
         serviceConfig = {
           Program = getExe (pkgs.writeShellApplication {
-            name = "hjem-activate";
+            name = "bayt-activate";
             # Maybe the kickstart is broken because a runtimeInput is missing?
             runtimeInputs = with pkgs; [coreutils-full bash];
             text = ''
@@ -128,7 +128,7 @@ in {
                 exit 0
               fi
 
-              STATE_DIR="$HOME/Library/Application Support/Hjem"
+              STATE_DIR="$HOME/Library/Application Support/Bayt"
               mkdir -p "$STATE_DIR"
               CUR="$STATE_DIR/manifest.json"
 
@@ -141,10 +141,10 @@ in {
               cp -f "$NEW" "$CUR"
             '';
           });
-          Label = "org.hjem.activate";
+          Label = "org.bayt.activate";
           RunAtLoad = true;
-          StandardOutPath = "/var/tmp/hjem-activate.out";
-          StandardErrorPath = "/var/tmp/hjem-activate.err";
+          StandardOutPath = "/var/tmp/bayt-activate.out";
+          StandardErrorPath = "/var/tmp/bayt-activate.err";
         };
       };
 
@@ -204,11 +204,11 @@ in {
     };
 
     system.activationScripts = {
-      hjem-activate-kick.text = mkAfter (
+      bayt-activate-kick.text = mkAfter (
         concatMapAttrsStringSep "\n"
         (u: _: ''
           if uid="$(${getExe' pkgs.coreutils-full "id"} -u ${u} 2>/dev/null)"; then
-            /bin/launchctl kickstart -k "gui/''${uid}/${config.launchd.user.agents.hjem-activate.serviceConfig.Label}" 2>/dev/null || true
+            /bin/launchctl kickstart -k "gui/''${uid}/${config.launchd.user.agents.bayt-activate.serviceConfig.Label}" 2>/dev/null || true
           fi
         '')
         enabledUsers

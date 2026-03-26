@@ -6,7 +6,7 @@
   checks = import ./internal/checks.nix {inherit smfh pkgs;};
   packages = import ./internal/packages.nix {
     inherit pkgs smfh;
-    hjemModule = nixosModules.default;
+    baytModule = nixosModules.default;
     nixpkgs = pkgs.path;
   };
   formatter = import ./internal/formatter.nix pkgs;

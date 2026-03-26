@@ -22,7 +22,7 @@ it above in your description.
 
 - [ ] My changes fit the guidelines found in [CONTRIBUTING] guide
 - [ ] I have tested, and self-reviewed my code
-- [ ] The [unit tests] for Hjem pass (`nix flake check`/`nix-build -A checks`)
+- [ ] The [unit tests] for Bayt pass (`nix flake check`/`nix-build -A checks`)
 - Style and consistency
   - [ ] I formatted all relevant code (`nix fmt`/`nix run -f . formatter`)
   - [ ] My changes are consistent with the rest of the codebase
@@ -48,4 +48,4 @@ module by showing who worked on it the most.
 Add a :+1: [reaction] to [pull requests you find important].
 
 [reaction]: https://github.blog/2016-03-10-add-reactions-to-pull-requests-issues-and-comments/
-[pull requests you find important]: https://github.com/feel-co/hjem/pulls?q=is%3Aopen+sort%3Areactions-%2B1-desc
+[pull requests you find important]: https://github.com/y0usaf/bayt/pulls?q=is%3Aopen+sort%3Areactions-%2B1-desc

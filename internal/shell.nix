@@ -1,6 +1,6 @@
 pkgs:
 pkgs.mkShell {
-  name = "hjem-devshell";
+  name = "bayt-devshell";
   packages = builtins.attrValues {
     inherit
       (pkgs)

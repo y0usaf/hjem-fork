@@ -1,17 +1,17 @@
 {
-  hjemModule,
-  hjemTest,
+  baytModule,
+  baytTest,
   lib,
   formats,
   writeText,
 }: let
   userHome = "/home/alice";
 in
-  hjemTest {
-    name = "hjem-xdg";
+  baytTest {
+    name = "bayt-xdg";
     nodes = {
       node1 = {
-        imports = [hjemModule];
+        imports = [baytModule];
 
         users.groups.alice = {};
         users.users.alice = {
@@ -20,8 +20,8 @@ in
           password = "";
         };
 
-        hjem.linker = null;
-        hjem.users = {
+        bayt.linker = null;
+        bayt.users = {
           alice = {
             enable = true;
             files = {
@@ -91,8 +91,8 @@ in
       machine.succeed("loginctl enable-linger alice")
       machine.wait_until_succeeds("systemctl --user --machine=alice@ is-active systemd-tmpfiles-setup.service")
 
-      # Test XDG files created by Hjem
-      with subtest("XDG basedir spec files created by Hjem"):
+      # Test XDG files created by Bayt
+      with subtest("XDG basedir spec files created by Bayt"):
         machine.succeed("[ -L ~alice/customCacheDirectory/foo ]")
         machine.succeed("grep \"Hello world!\" ~alice/customCacheDirectory/foo")
         machine.succeed("[ -L ~alice/customConfigDirectory/bar.json ]")
@@ -103,11 +103,11 @@ in
         machine.succeed("[ -L ~alice/customStateDirectory/foo ]")
         machine.succeed("grep \"Hello fourth world!\" ~alice/customStateDirectory/foo")
 
-      with subtest("XDG mime-apps spec file created by Hjem"):
+      with subtest("XDG mime-apps spec file created by Bayt"):
         machine.succeed("[ -L ~alice/customConfigDirectory/mimeapps.list ]")
         machine.succeed("grep \"text/xml\" ~alice/customConfigDirectory/mimeapps.list")
 
-      with subtest("Basic test file for Hjem"):
+      with subtest("Basic test file for Bayt"):
         machine.succeed("[ -L ~alice/foo ]") # Same name as cache test file to verify proper merging
         machine.succeed("grep \"Hello world!\" ~alice/foo")
         # Test regular files, created by systemd-tmpfiles

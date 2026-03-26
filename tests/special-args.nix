@@ -1,15 +1,15 @@
 {
-  hjemModule,
-  hjemTest,
+  baytModule,
+  baytTest,
   hello,
 }: let
   userHome = "/home/alice";
 in
-  hjemTest {
-    name = "hjem-basic";
+  baytTest {
+    name = "bayt-basic";
     nodes = {
       node1 = {
-        imports = [hjemModule];
+        imports = [baytModule];
 
         users.groups.alice = {};
         users.users.alice = {
@@ -18,7 +18,7 @@ in
           password = "";
         };
 
-        hjem = {
+        bayt = {
           linker = null;
           # Things like username, home directory or credentials should not really
           # be put into specialArgs, but users do it anyway. Lets test for a very

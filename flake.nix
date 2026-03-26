@@ -20,9 +20,9 @@
     nixpkgs,
     ...
   } @ inputs: let
-    # We should only specify the modules Hjem explicitly supports, or we risk
+    # We should only specify the modules Bayt explicitly supports, or we risk
     # allowing not-so-defined behaviour. For example, adding nix-systems should
-    # be avoided, because it allows specifying systems Hjem is not tested on.
+    # be avoided, because it allows specifying systems Bayt is not tested on.
     forAllSystems = nixpkgs.lib.genAttrs ["x86_64-linux" "aarch64-linux" "aarch64-darwin"];
     pkgsFor = system: nixpkgs.legacyPackages.${system};
   in {
@@ -31,9 +31,7 @@
 
     packages = forAllSystems (system:
       import ./internal/packages.nix {
-        inherit nixpkgs;
         inherit (inputs.smfh.packages.${system}) smfh;
-        hjemModule = self.nixosModules.default;
         pkgs = pkgsFor system;
       });
 
@@ -52,7 +50,7 @@
       forAllSystems (system:
         import ./internal/formatter.nix (pkgsFor system));
 
-    hjem-lib = forAllSystems (system:
+    bayt-lib = forAllSystems (system:
       import ./lib.nix {
         inherit (nixpkgs) lib;
         pkgs = nixpkgs.legacyPackages.${system};
