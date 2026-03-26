@@ -39,6 +39,7 @@
       import ./internal/checks.nix {
         inherit self;
         inherit (self.packages.${system}) smfh;
+        inherit (inputs) nix-darwin;
         pkgs = pkgsFor system;
       });
 

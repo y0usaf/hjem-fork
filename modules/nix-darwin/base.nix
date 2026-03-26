@@ -10,7 +10,7 @@
   inherit (bayt-lib) fileToJson;
   inherit (lib.attrsets) filterAttrs;
   inherit (lib.meta) getExe getExe';
-  inherit (lib.modules) importApply mkAfter mkDefault;
+  inherit (lib.modules) importApply mkAfter mkDefault mkIf;
   inherit (lib.strings) concatMapAttrsStringSep escapeShellArgs;
   inherit (lib.trivial) flip pipe;
   inherit (lib.types) submoduleWith;
@@ -108,11 +108,11 @@ in {
   config = {
     # Temporary requirement: choose a primary user, pick the first enabled user.
     # This option will be deprecated in the future.
-    system.primaryUser = mkDefault (head (attrValues enabledUsers)).name;
+    system.primaryUser = mkIf (enabledUsers != {}) (mkDefault (head (attrValues enabledUsers)).name);
 
     # launchd agent to apply/diff the manifest per logged-in user
     # https://github.com/nix-darwin/nix-darwin/issues/871#issuecomment-2340443820
-    launchd.user.agents = {
+    launchd.user.agents = mkIf (enabledUsers != {}) {
       bayt-activate = {
         serviceConfig = {
           Program = getExe (pkgs.writeShellApplication {
@@ -204,7 +204,7 @@ in {
       };
     };
 
-    system.activationScripts = {
+    system.activationScripts = mkIf (enabledUsers != {}) {
       bayt-activate-kick.text = mkAfter (
         concatMapAttrsStringSep "\n"
         (u: _: ''
