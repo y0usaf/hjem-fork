@@ -35,8 +35,8 @@
   linker = getExe cfg.linker;
 
   newManifests = let
-    writeManifest = username: let
-      name = "manifest-${username}.json";
+    writeManifest = user: let
+      name = "manifest-${user.name}.json";
     in
       pkgs.writeTextFile {
         inherit name;
@@ -49,7 +49,7 @@
               (filter (x: x.enable))
               (map fileToJson)
             ]
-          ) (userFiles cfg.users.${username});
+          ) (userFiles user);
         };
         checkPhase = ''
           set -e
@@ -63,7 +63,7 @@
     pkgs.symlinkJoin
     {
       name = "bayt-manifests";
-      paths = map writeManifest (attrNames enabledUsers);
+      paths = map writeManifest (attrValues enabledUsers);
     };
 
   baytSubmodule = submoduleWith {
@@ -95,6 +95,7 @@
               }
             ];
 
+            name = mkDefault user.name;
             user = mkDefault user.name;
             directory = mkDefault user.home;
             clobberFiles = mkDefault cfg.clobberByDefault;
@@ -142,12 +143,12 @@ in {
         wantedBy = ["sysinit-reactivation.target" "multi-user.target"];
         before = ["sysinit-reactivation.target"];
         requires = let
-          requiredUserServices = name: [
-            "bayt-activate@${name}.service"
-            "bayt-copy@${name}.service"
+          requiredUserServices = u: [
+            "bayt-activate@${u.name}.service"
+            "bayt-copy@${u.name}.service"
           ];
         in
-          concatMap requiredUserServices (attrNames enabledUsers)
+          concatMap requiredUserServices (attrValues enabledUsers)
           ++ ["bayt-cleanup.service"];
       };
 
@@ -155,7 +156,7 @@ in {
         oldManifests = "/var/lib/bayt";
         checkEnabledUsers = ''
           case "$1" in
-            ${concatStringsSep "|" (attrNames enabledUsers)}) ;;
+            ${concatStringsSep "|" (map (u: u.name) (attrValues enabledUsers))}) ;;
             *) echo "User '%i' is not configured for Bayt" >&2; exit 0 ;;
           esac
         '';

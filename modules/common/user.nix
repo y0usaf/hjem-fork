@@ -47,6 +47,12 @@ in {
         example = false;
       };
 
+    name = mkOption {
+      default = name;
+      type = passwdEntry str;
+      description = "The name of the user account. Defaults to the attribute name.";
+    };
+
     user = mkOption {
       type = strMatching "[a-zA-Z0-9_.][a-zA-Z0-9_.-]*";
       description = "The owner of a given home directory.";
