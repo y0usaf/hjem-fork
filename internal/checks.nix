@@ -18,7 +18,7 @@
     packagesFromDirectoryRecursive {
       callPackage = pkgs.newScope (checks
         // {
-          inherit baytTest;
+          inherit baytTest nix-darwin self;
           baytModule = (import (self + "/modules/nixos")).default;
         });
       directory = ../tests;
@@ -45,6 +45,11 @@
             touch $out
           '';
 
+      darwin-enabled-user-eval = import (self + "/tests/darwin-adapter-eval.nix") {
+        inherit self nix-darwin pkgs;
+        lib = pkgs.lib;
+      };
+
       # Build the 'smfh' package as a part of Bayt's test suite.
       # If 'nix flake check' is ran in the CI, this might inflate build times
       # *a lot*.
@@ -52,6 +57,10 @@
 
       # Formatting checks to run as a part of 'nix flake check' or manually
       # via 'nix build .#checks.<system>.formatting'.
+      standalone-configuration-outputs = import (self + "/tests/standalone-configuration-outputs.nix") {
+        inherit self pkgs smfh;
+      };
+
       formatting =
         pkgs.runCommandLocal "bayt-formatting-check" {
           nativeBuildInputs = [pkgs.alejandra];

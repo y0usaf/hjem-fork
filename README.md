@@ -122,6 +122,46 @@ $ nix eval .#nixosConfigurations.test.config.bayt.users.alice.files.'".foo"' --j
 }
 ```
 
+### Standalone outputs
+
+For standalone evaluation, Bayt exposes helpers that return buildable outputs like `manifest` and `activationPackage`.
+A minimal downstream flake pattern is:
+
+```nix
+{
+  outputs = { self, nixpkgs, bayt, ... }: let
+    system = "x86_64-linux";
+    pkgs = import nixpkgs { inherit system; };
+  in {
+    baytConfigurations = bayt.lib.mkStandaloneConfigurations {
+      inherit system;
+      configurations.yousaf = {
+        inherit pkgs;
+        modules = [
+          {
+            home.username = "yousaf";
+            home.homeDirectory = "/home/yousaf";
+
+            bayt = {
+              linker = bayt.packages.${system}.smfh;
+              files.".zshrc".text = "export EDITOR=nvim";
+            };
+          }
+        ];
+      };
+    };
+  };
+}
+```
+
+This enables builds such as:
+
+```sh
+nix build .#baytConfigurations.yousaf.activationPackage
+```
+
+If you only need one standalone config, `bayt.lib.mkStandaloneConfiguration` and `bayt.lib.forSystem system.mkStandaloneConfiguration` are also available. `bayt.lib.mkConfiguration` remains the lower-level primitive when you want to assemble the module graph yourself.
+
 ### Linker Implementation
 
 Bayt relies on [smfh], an atomic and reliable file creation tool designed by

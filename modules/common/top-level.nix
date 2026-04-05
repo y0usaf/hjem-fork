@@ -7,7 +7,7 @@
   config,
   ...
 }: let
-  inherit (builtins) concatLists mapAttrs;
+  inherit (builtins) concatLists;
   inherit (lib.attrsets) filterAttrs mapAttrsToList;
   inherit (lib.lists) optional;
   inherit (lib.options) literalExpression mkOption mkPackageOption;
@@ -99,11 +99,9 @@ in {
   };
 
   config = {
-    users.users = (mapAttrs (_: v: {inherit (v) packages;})) enabledUsers;
-
     assertions =
       concatLists
-      (mapAttrsToList (user: config:
+      (mapAttrsToList (user: userConfig:
         map ({
           assertion,
           message,
@@ -112,7 +110,7 @@ in {
           inherit assertion;
           message = "${user} profile: ${message}";
         })
-        config.assertions)
+        userConfig.assertions)
       enabledUsers)
       ++ [
         {
@@ -124,11 +122,8 @@ in {
     warnings =
       concatLists
       (mapAttrsToList (
-          user: v:
-            map (
-              warning: "${user} profile: ${warning}"
-            )
-            v.warnings
+          user: userConfig:
+            map (warning: "${user} profile: ${warning}") userConfig.warnings
         )
         enabledUsers)
       ++ optional

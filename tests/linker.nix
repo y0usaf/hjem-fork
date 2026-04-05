@@ -43,6 +43,17 @@ in
             };
           };
 
+          unmanagedProtected.configuration = {
+            bayt.users.${user}.files.".config/protect".text = "managed";
+          };
+
+          unmanagedClobbered.configuration = {
+            bayt.users.${user}.files.".config/replace" = {
+              text = "managed";
+              clobber = true;
+            };
+          };
+
           variousFileTypes.configuration = {
             bayt.users.${user}.files = {
               foo = {
@@ -75,15 +86,26 @@ in
 
       with subtest("Activation service runs correctly"):
         node1.succeed("${baseSystem}/bin/switch-to-configuration test")
-        node1.succeed("systemctl show servicename --property=Result --value | grep -q '^success$'")
+        node1.succeed("systemctl show bayt-activate@${user}.service --property=Result --value | grep -q '^success$'")
+        node1.succeed("systemctl show bayt-copy@${user}.service --property=Result --value | grep -q '^success$'")
 
       with subtest("Manifest gets created"):
         node1.succeed("${baseSystem}/bin/switch-to-configuration test")
         node1.succeed("[ -f /var/lib/bayt/manifest-${user}.json ]")
 
+      with subtest("Per-user state manifest gets created"):
+        node1.succeed("${baseSystem}/bin/switch-to-configuration test")
+        node1.succeed("[ -f ${userHome}/.local/state/bayt/manifest.json ]")
+
       with subtest("File gets linked"):
         node1.succeed("${specialisations}/fileGetsLinked/bin/switch-to-configuration test")
         node1.succeed("test -L ${userHome}/.config/foo")
+        node1.succeed("grep \"Hello world!\" ${userHome}/.config/foo")
+
+      with subtest("Repeated activation is idempotent"):
+        node1.succeed("${specialisations}/fileGetsLinked/bin/switch-to-configuration test")
+        node1.succeed("${specialisations}/fileGetsLinked/bin/switch-to-configuration test")
+        node1.succeed("systemctl show bayt-activate@${user}.service --property=Result --value | grep -q '^success$'")
         node1.succeed("grep \"Hello world!\" ${userHome}/.config/foo")
 
       with subtest("File gets overwritten when changed"):
@@ -91,6 +113,30 @@ in
         node1.succeed("${specialisations}/fileGetsOverwritten/bin/switch-to-configuration test")
         node1.succeed("test -L ${userHome}/.config/foo")
         node1.succeed("grep \"Hello new world!\" ${userHome}/.config/foo")
+
+      with subtest("Managed file gets removed when removed from config"):
+        node1.succeed("${specialisations}/fileGetsLinked/bin/switch-to-configuration test")
+        node1.succeed("${baseSystem}/bin/switch-to-configuration test")
+        node1.succeed("! test -e ${userHome}/.config/foo")
+        node1.succeed("! grep -q '${userHome}/.config/foo' /var/lib/bayt/manifest-${user}.json")
+
+      with subtest("Unmanaged file is preserved when clobber is false"):
+        node1.succeed("mkdir -p ${userHome}/.config")
+        node1.succeed("printf unmanaged > ${userHome}/.config/protect")
+        node1.succeed("chown -R ${user}:${user} ${userHome}/.config")
+        node1.succeed("cp /var/lib/bayt/manifest-${user}.json /tmp/manifest-before.json")
+        node1.succeed("${specialisations}/unmanagedProtected/bin/switch-to-configuration test || true")
+        node1.succeed("systemctl is-failed bayt-activate@${user}.service | grep -q '^failed$'")
+        node1.succeed("grep unmanaged ${userHome}/.config/protect")
+        node1.succeed("cmp /tmp/manifest-before.json /var/lib/bayt/manifest-${user}.json")
+
+      with subtest("Unmanaged file is replaced when clobber is true"):
+        node1.succeed("mkdir -p ${userHome}/.config")
+        node1.succeed("printf unmanaged > ${userHome}/.config/replace")
+        node1.succeed("chown -R ${user}:${user} ${userHome}/.config")
+        node1.succeed("${specialisations}/unmanagedClobbered/bin/switch-to-configuration test")
+        node1.succeed("systemctl show bayt-activate@${user}.service --property=Result --value | grep -q '^success$'")
+        node1.succeed("grep managed ${userHome}/.config/replace")
 
       with subtest("Various file type tests"):
         node1.succeed("touch ${userHome}/{bar,boop}")
