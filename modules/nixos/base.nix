@@ -126,6 +126,14 @@ in {
         '';
         activationDispatcher = concatStringsSep "\n" (map (u: ''
           ${escapeShellArg u.name})
+            state_manifest=${escapeShellArg perUserOutputs.${u.name}.stateManifest}
+            legacy_manifest=${escapeShellArg "${oldManifests}/manifest-${u.name}.json"}
+
+            if [ ! -f "$state_manifest" ] && [ -f "$legacy_manifest" ]; then
+              mkdir -p "$(dirname "$state_manifest")"
+              cp "$legacy_manifest" "$state_manifest"
+            fi
+
             exec ${escapeShellArg "${perUserOutputs.${u.name}.activationPackage}/bin/bayt-activate"}
             ;;
         '') (attrValues enabledUsers));

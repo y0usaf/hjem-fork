@@ -108,6 +108,15 @@ in
         node1.succeed("systemctl show bayt-activate@${user}.service --property=Result --value | grep -q '^success$'")
         node1.succeed("grep \"Hello world!\" ${userHome}/.config/foo")
 
+      with subtest("Legacy system manifest seeds per-user state automatically"):
+        node1.succeed("${specialisations}/fileGetsLinked/bin/switch-to-configuration test")
+        node1.succeed("rm -f ${userHome}/.local/state/bayt/manifest.json")
+        node1.succeed("[ -f /var/lib/bayt/manifest-${user}.json ]")
+        node1.succeed("${specialisations}/fileGetsLinked/bin/switch-to-configuration test")
+        node1.succeed("systemctl show bayt-activate@${user}.service --property=Result --value | grep -q '^success$'")
+        node1.succeed("[ -f ${userHome}/.local/state/bayt/manifest.json ]")
+        node1.succeed("grep \"Hello world!\" ${userHome}/.config/foo")
+
       with subtest("File gets overwritten when changed"):
         node1.succeed("${specialisations}/fileGetsLinked/bin/switch-to-configuration test")
         node1.succeed("${specialisations}/fileGetsOverwritten/bin/switch-to-configuration test")
