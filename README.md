@@ -210,8 +210,7 @@ Special thanks to [Nixpkgs] and [Home Manager]. The interface of the
 
 ## License
 
-The primary license text is in [LICENSE](LICENSE). The MPL-2.0
-license text is retained in [LICENSE-MPL](LICENSE-MPL).
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 
 <div align="right">
   <a href="#doc-begin">Back to the Top</a>
