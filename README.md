@@ -1,9 +1,5 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
-> [!IMPORTANT]
-> Bayt is a downstream fork of [hjem](https://github.com/feel-co/hjem).
-> Upstream deserves credit for the original design and implementation.
-
 <div id="doc-begin" align="center">
   <h1 id="header">
     <pre>Bayt [بَيْت]</pre>
@@ -98,14 +94,10 @@ may use to manage individual users' homes by leveraging the module system.
 
 ## Module Interface
 
-[already does!]: https://github.com/snugnug/hjem-rum
-
 The interface for the `bayt` module is conceptually very similar to prior art
 (e.g., Home Manager), but it does not act as a collection of modules like Home
 Manager. Instead, we implement minimal features, and leave
 application-specific abstractions to the user to do as they see fit.
-This, of course, does not mean that a module collection cannot exist.
-In fact, one [already does!]
 
 ```sh
 $ nix eval .#nixosConfigurations.test.config.bayt.users.alice.files.'".foo"' --json | jq
@@ -202,7 +194,7 @@ abstracting files into modules.
 
 [Gerg-l]: https://github.com/gerg-l
 
-Upstream hjem previously utilized [systemd-tmpfiles] before switching to [smfh]
+Bayt previously utilized [systemd-tmpfiles] before switching to [smfh]
 developed by [Gerg-l]. You can set `bayt.linker` to use a custom linker if desired.
 
 </details>
@@ -211,30 +203,14 @@ developed by [Gerg-l]. You can set `bayt.linker` to use a custom linker if desir
 
 [Nixpkgs]: https://github.com/nixOS/nixpkgs
 [Home Manager]: https://github.com/nix-community/home-manager
-[Hjem]: https://github.com/feel-co/hjem
-[Hjem Rum]: https://github.com/snugnug/hjem-rum
-[@Lunarnovaa]: https://github.com/lunarnovaa
-[@nezia1]: https://github.com/nezia1
-
-Bayt is a fork of [Hjem] by feel-co — thank you for the excellent foundation.
 
 Special thanks to [Nixpkgs] and [Home Manager]. The interface of the
 `bayt.users` module is inspired by Home Manager's `home.file` and Nixpkgs'
 `users.users` modules.
 
-<details>
-<summary>Hjem Rum — module collection for Hjem/Bayt</summary>
-
-[Hjem Rum], by [@Lunarnovaa] and [@nezia1], establishes a Home Manager-like
-module system for users less comfortable with manually linking files in place.
-If you want an easier interface on top of Bayt, take a look at Hjem Rum.
-
-</details>
-
 ## License
 
-This project is a fork of [hjem](https://github.com/feel-co/hjem) by feel-co.
-The fork's primary license text is in [LICENSE](LICENSE). Upstream MPL-2.0
+The primary license text is in [LICENSE](LICENSE). The MPL-2.0
 license text is retained in [LICENSE-MPL](LICENSE-MPL).
 
 <div align="right">
