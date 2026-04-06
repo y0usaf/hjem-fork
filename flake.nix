@@ -28,6 +28,7 @@
   in {
     nixosModules = import ./modules/nixos;
     darwinModules = import ./modules/nix-darwin;
+    modules.standalone = (import ./modules/standalone).default;
 
     packages = forAllSystems (system:
       import ./internal/packages.nix {
@@ -50,6 +51,50 @@
     formatter =
       forAllSystems (system:
         import ./internal/formatter.nix (pkgsFor system));
+
+    lib = rec {
+      mkConfiguration = import ./lib/configuration.nix {lib = nixpkgs.lib;};
+
+      forSystem = system: let
+        baytLib = import ./lib.nix {
+          inherit (nixpkgs) lib;
+          pkgs = pkgsFor system;
+        };
+      in
+        baytLib
+        // rec {
+          mkStandaloneConfiguration = {
+            modules,
+            pkgs ? pkgsFor system,
+            specialArgs ? {},
+          }:
+            mkConfiguration {
+              inherit pkgs specialArgs;
+              modules = [self.modules.standalone] ++ modules;
+            };
+
+          mkStandaloneConfigurations = configurations:
+            nixpkgs.lib.mapAttrs (_: configuration:
+              mkStandaloneConfiguration configuration)
+            configurations;
+        };
+
+      mkStandaloneConfiguration = {
+        system,
+        modules,
+        pkgs ? pkgsFor system,
+        specialArgs ? {},
+      }:
+        (forSystem system).mkStandaloneConfiguration {
+          inherit modules pkgs specialArgs;
+        };
+
+      mkStandaloneConfigurations = {
+        system,
+        configurations,
+      }:
+        (forSystem system).mkStandaloneConfigurations configurations;
+    };
 
     bayt-lib = forAllSystems (system:
       import ./lib.nix {

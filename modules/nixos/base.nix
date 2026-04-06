@@ -7,14 +7,12 @@
   utils,
   ...
 }: let
-  inherit (builtins) attrNames attrValues concatLists concatMap concatStringsSep filter mapAttrs toJSON typeOf;
-  inherit (bayt-lib) fileToJson;
+  inherit (builtins) attrNames attrValues concatLists concatMap concatStringsSep filter map mapAttrs;
   inherit (lib.attrsets) filterAttrs optionalAttrs;
   inherit (lib.modules) importApply mkDefault mkIf mkMerge;
-  inherit (lib.strings) optionalString;
-  inherit (lib.trivial) flip pipe;
+  inherit (lib.strings) escapeShellArg optionalString;
+  inherit (lib.trivial) pipe;
   inherit (lib.types) submoduleWith;
-  inherit (lib.meta) getExe;
 
   osConfig = config;
 
@@ -24,47 +22,15 @@
   enabledUsers = filterAttrs (_: u: u.enable) cfg.users;
   disabledUsers = filterAttrs (_: u: !u.enable) cfg.users;
 
-  userFiles = user: [
-    user.files
-    user.xdg.cache.files
-    user.xdg.config.files
-    user.xdg.data.files
-    user.xdg.state.files
-  ];
+  userFiles = bayt-lib.userFileSets;
 
-  linker = getExe cfg.linker;
-
-  newManifests = let
-    writeManifest = user: let
-      name = "manifest-${user.name}.json";
-    in
-      pkgs.writeTextFile {
-        inherit name;
-        destination = "/${name}";
-        text = toJSON {
-          version = 3;
-          files = concatMap (
-            flip pipe [
-              attrValues
-              (filter (x: x.enable))
-              (map fileToJson)
-            ]
-          ) (userFiles user);
-        };
-        checkPhase = ''
-          set -e
-          CUE_CACHE_DIR=$(pwd)/.cache
-          CUE_CONFIG_DIR=$(pwd)/.config
-
-          ${getExe pkgs.cue} vet -c ${../../manifest/v3.cue} $target
-        '';
-      };
-  in
-    pkgs.symlinkJoin
-    {
-      name = "bayt-manifests";
-      paths = map writeManifest (attrValues enabledUsers);
-    };
+  perUserOutputs = bayt-lib.mkPerUserOutputs {
+    users = enabledUsers;
+    linker = cfg.linker;
+    linkerOptions = cfg.linkerOptions;
+    isDarwin = false;
+    manifestName = "manifest.json";
+  };
 
   baytSubmodule = submoduleWith {
     description = "Bayt submodule for NixOS";
@@ -75,36 +41,34 @@
         inherit bayt-lib osConfig pkgs utils;
         osOptions = options;
       };
-    modules =
-      concatLists
+    modules = concatLists [
       [
-        [
-          ../common/user.nix
-          ./systemd.nix
-          ({
-            config,
-            name,
-            ...
-          }: let
-            user = osConfig.users.users.${name};
-          in {
-            assertions = [
-              {
-                assertion = config.enable -> user.enable;
-                message = "Enabled Bayt user '${name}' must also be configured and enabled in NixOS.";
-              }
-            ];
+        ../common/user.nix
+        ./systemd.nix
+        ({
+          config,
+          name,
+          ...
+        }: let
+          user = osConfig.users.users.${name};
+        in {
+          assertions = [
+            {
+              assertion = config.enable -> user.enable;
+              message = "Enabled Bayt user '${name}' must also be configured and enabled in NixOS.";
+            }
+          ];
 
-            name = mkDefault user.name;
-            user = mkDefault user.name;
-            directory = mkDefault user.home;
-            clobberFiles = mkDefault cfg.clobberByDefault;
-          })
-        ]
-        # Evaluate additional modules under 'bayt.users.<username>' so that
-        # module systems built on Bayt are more ergonomic.
-        cfg.extraModules
-      ];
+          name = mkDefault user.name;
+          user = mkDefault user.name;
+          directory = mkDefault user.home;
+          clobberFiles = mkDefault cfg.clobberByDefault;
+        })
+      ]
+      # Evaluate additional modules under 'bayt.users.<username>' so that
+      # module systems built on Bayt are more ergonomic.
+      cfg.extraModules
+    ];
   };
 in {
   inherit _class;
@@ -114,6 +78,10 @@ in {
   ];
 
   config = mkMerge [
+    {
+      users.users = mapAttrs (_: v: {inherit (v) packages;}) enabledUsers;
+    }
+
     # Constructed rule string that consists of the type, target, and source
     # of a tmpfile. Files with 'null' sources are filtered before the rule
     # is constructed.
@@ -134,9 +102,6 @@ in {
     })
 
     (mkIf (cfg.linker != null) {
-      /*
-      The different Bayt services expect the manifest to be generated under `/var/lib/bayt/manifest-{user}.json`.
-      */
       systemd.targets.bayt = {
         description = "Bayt File Management";
         after = ["local-fs.target"];
@@ -144,7 +109,6 @@ in {
         before = ["sysinit-reactivation.target"];
         requires = let
           requiredUserServices = u: [
-            "bayt-activate@${u.name}.service"
             "bayt-copy@${u.name}.service"
           ];
         in
@@ -157,9 +121,28 @@ in {
         checkEnabledUsers = ''
           case "$1" in
             ${concatStringsSep "|" (map (u: u.name) (attrValues enabledUsers))}) ;;
-            *) echo "User '%i' is not configured for Bayt" >&2; exit 0 ;;
+            *) echo "User '$1' is not configured for Bayt" >&2; exit 0 ;;
           esac
         '';
+        activationDispatcher = concatStringsSep "\n" (map (u: ''
+          ${escapeShellArg u.name})
+            state_manifest=${escapeShellArg perUserOutputs.${u.name}.stateManifest}
+            legacy_manifest=${escapeShellArg "${oldManifests}/manifest-${u.name}.json"}
+
+            if [ ! -f "$state_manifest" ] && [ -f "$legacy_manifest" ]; then
+              mkdir -p "$(dirname "$state_manifest")"
+              cp "$legacy_manifest" "$state_manifest"
+            fi
+
+            exec ${escapeShellArg "${perUserOutputs.${u.name}.activationPackage}/bin/bayt-activate"}
+            ;;
+        '') (attrValues enabledUsers));
+        mirrorDispatcher = concatStringsSep "\n" (map (u: ''
+          ${escapeShellArg u.name})
+            state_manifest=${escapeShellArg perUserOutputs.${u.name}.stateManifest}
+            destination_manifest=${escapeShellArg "${oldManifests}/manifest-${u.name}.json"}
+            ;;
+        '') (attrValues enabledUsers));
       in
         optionalAttrs (enabledUsers != {}) {
           bayt-prepare = {
@@ -179,26 +162,15 @@ in {
             };
             requires = [
               "bayt-prepare.service"
-              "bayt-copy@%i.service"
             ];
             after = ["bayt-prepare.service"];
             scriptArgs = "%i";
-            script = let
-              linkerOpts =
-                if (typeOf cfg.linkerOptions == "set")
-                then ''--linker-opts "${toJSON cfg.linkerOptions}"''
-                else concatStringsSep " " cfg.linkerOptions;
-            in ''
+            script = ''
               ${checkEnabledUsers}
-              new_manifest="${newManifests}/manifest-$1.json"
-              old_manifest="${oldManifests}/manifest-$1.json"
 
-              if [ ! -f "$old_manifest" ]; then
-                ${linker} ${linkerOpts} activate "$new_manifest"
-                exit 0
-              fi
-
-              ${linker} ${linkerOpts} diff "$new_manifest" "$old_manifest"
+              case "$1" in
+              ${activationDispatcher}
+              esac
             '';
           };
 
@@ -206,7 +178,14 @@ in {
             description = "Copy the manifest into Bayt's state directory for %i";
             enableStrictShellChecks = true;
             serviceConfig.Type = "oneshot";
-            after = ["bayt-activate@%i.service"];
+            requires = [
+              "bayt-prepare.service"
+              "bayt-activate@%i.service"
+            ];
+            after = [
+              "bayt-prepare.service"
+              "bayt-activate@%i.service"
+            ];
             scriptArgs = "%i";
             /*
             TODO: remove the if condition in a while, this is in place because the first iteration of the
@@ -216,17 +195,20 @@ in {
             */
             script = ''
               ${checkEnabledUsers}
-              new_manifest="${newManifests}/manifest-$1.json"
 
-              if ! cp "$new_manifest" ${oldManifests}; then
+              case "$1" in
+              ${mirrorDispatcher}
+              esac
+
+              if ! cp "$state_manifest" "$destination_manifest"; then
                 echo "Copying the manifest for $1 failed. This is likely due to using the previous\
                 version of the manifest handling. The manifest directory has been recreated and repopulated with\
-                %i's manifest. Please re-run the activation services for your other users, if you have ran this one manually."
+                $1's manifest. Please re-run the activation services for your other users, if you have ran this one manually."
 
                 rm -rf ${oldManifests}
                 mkdir -p ${oldManifests}
 
-                cp "$new_manifest" ${oldManifests}
+                cp "$state_manifest" "$destination_manifest"
               fi
             '';
           };

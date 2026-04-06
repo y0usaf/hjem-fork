@@ -6,13 +6,11 @@
   pkgs,
   ...
 }: let
-  inherit (builtins) attrNames attrValues concatLists concatMap filter getAttr head isAttrs toJSON;
-  inherit (bayt-lib) fileToJson;
+  inherit (builtins) attrValues concatLists getAttr head mapAttrs;
   inherit (lib.attrsets) filterAttrs;
   inherit (lib.meta) getExe getExe';
   inherit (lib.modules) importApply mkAfter mkDefault mkIf;
-  inherit (lib.strings) concatMapAttrsStringSep escapeShellArgs;
-  inherit (lib.trivial) flip pipe;
+  inherit (lib.strings) concatMapAttrsStringSep escapeShellArg;
   inherit (lib.types) submoduleWith;
 
   cfg = config.bayt;
@@ -20,47 +18,13 @@
 
   enabledUsers = filterAttrs (_: u: u.enable) cfg.users;
 
-  userFiles = user: [
-    user.files
-    user.xdg.cache.files
-    user.xdg.config.files
-    user.xdg.data.files
-    user.xdg.state.files
-  ];
-
-  linker = getExe cfg.linker;
-
-  newManifests = let
-    writeManifest = user: let
-      name = "manifest-${user.name}.json";
-    in
-      pkgs.writeTextFile {
-        inherit name;
-        destination = "/${name}";
-        text = toJSON {
-          version = 3;
-          files = concatMap (
-            flip pipe [
-              attrValues
-              (filter (x: x.enable))
-              (map fileToJson)
-            ]
-          ) (userFiles user);
-        };
-        checkPhase = ''
-          set -e
-          CUE_CACHE_DIR=$(pwd)/.cache
-          CUE_CONFIG_DIR=$(pwd)/.config
-
-          ${getExe pkgs.cue} vet -c ${../../manifest/v3.cue} $target
-        '';
-      };
-  in
-    pkgs.symlinkJoin
-    {
-      name = "bayt-manifests";
-      paths = map writeManifest (attrValues enabledUsers);
-    };
+  perUserOutputs = bayt-lib.mkPerUserOutputs {
+    users = enabledUsers;
+    linker = cfg.linker;
+    linkerOptions = cfg.linkerOptions;
+    isDarwin = true;
+    manifestName = "manifest.json";
+  };
 
   baytSubmodule = submoduleWith {
     description = "Bayt submodule for nix-darwin";
@@ -72,74 +36,57 @@
         osConfig = config;
         osOptions = options;
       };
-    modules =
-      concatLists
+    modules = concatLists [
       [
-        [
-          ../common/user.nix
-          ({name, ...}: let
-            user = getAttr name config.users.users;
-          in {
-            name = mkDefault user.name;
-            user = mkDefault user.name;
-            directory = mkDefault user.home;
-            clobberFiles = mkDefault cfg.clobberByDefault;
-          })
-        ]
-        # Evaluate additional modules under 'bayt.users.<username>' so that
-        # module systems built on Bayt are more ergonomic.
-        cfg.extraModules
-      ];
+        ../common/user.nix
+        ({name, ...}: let
+          user = getAttr name config.users.users;
+        in {
+          name = mkDefault user.name;
+          user = mkDefault user.name;
+          directory = mkDefault user.home;
+          clobberFiles = mkDefault cfg.clobberByDefault;
+        })
+      ]
+      # Evaluate additional modules under 'bayt.users.<username>' so that
+      # module systems built on Bayt are more ergonomic.
+      cfg.extraModules
+    ];
   };
-
-  linkerArgs =
-    if isAttrs cfg.linkerOptions
-    then let
-      f = pkgs.writeText "smfh-opts.json" (toJSON cfg.linkerOptions);
-    in ["--linker-opts" f]
-    else cfg.linkerOptions;
-
-  argsStr = escapeShellArgs linkerArgs;
 in {
   imports = [
     (importApply ../common/top-level.nix {inherit baytSubmodule _class;})
   ];
 
   config = {
+    users.users = mapAttrs (_: v: {inherit (v) packages;}) enabledUsers;
+
     # Temporary requirement: choose a primary user, pick the first enabled user.
     # This option will be deprecated in the future.
     system.primaryUser = mkIf (enabledUsers != {}) (mkDefault (head (attrValues enabledUsers)).name);
 
-    # launchd agent to apply/diff the manifest per logged-in user
+    # launchd agent to apply the per-user shared activation package
     # https://github.com/nix-darwin/nix-darwin/issues/871#issuecomment-2340443820
     launchd.user.agents = mkIf (enabledUsers != {}) {
       bayt-activate = {
         serviceConfig = {
           Program = getExe (pkgs.writeShellApplication {
             name = "bayt-activate";
-            # Maybe the kickstart is broken because a runtimeInput is missing?
             runtimeInputs = with pkgs; [coreutils-full bash];
             text = ''
               set -euo pipefail
 
               USER="$(id -un)"
-              NEW="${newManifests}/manifest-''${USER}.json"
 
-              if [ ! -f "$NEW" ]; then
-                exit 0
-              fi
-
-              STATE_DIR="$HOME/Library/Application Support/Bayt"
-              mkdir -p "$STATE_DIR"
-              CUR="$STATE_DIR/manifest.json"
-
-              if [ ! -f "$CUR" ]; then
-                ${linker} ${argsStr} activate "$NEW"
-              else
-                ${linker} ${argsStr} diff "$NEW" "$CUR"
-              fi
-
-              cp -f "$NEW" "$CUR"
+              case "$USER" in
+              ${concatMapAttrsStringSep "\n" (name: _: ''
+                  ${escapeShellArg name})
+                    exec ${escapeShellArg "${perUserOutputs.${name}.activationPackage}/bin/bayt-activate"}
+                    ;;
+                '')
+                enabledUsers}
+                *) exit 0 ;;
+              esac
             '';
           });
           Label = "org.bayt.activate";
@@ -208,7 +155,7 @@ in {
       bayt-activate-kick.text = mkAfter (
         concatMapAttrsStringSep "\n"
         (u: _: ''
-          if uid="$(${getExe' pkgs.coreutils-full "id"} -u ${u} 2>/dev/null)"; then
+          if uid="$(${getExe' pkgs.coreutils-full "id"} -u ${escapeShellArg u} 2>/dev/null)"; then
             /bin/launchctl kickstart -k "gui/''${uid}/${config.launchd.user.agents.bayt-activate.serviceConfig.Label}" 2>/dev/null || true
           fi
         '')
@@ -219,7 +166,7 @@ in {
       applications.text = mkAfter (
         concatMapAttrsStringSep "\n"
         (u: _: ''
-          if uid="$(${getExe' pkgs.coreutils-full "id"} -u ${u} 2>/dev/null)"; then
+          if uid="$(${getExe' pkgs.coreutils-full "id"} -u ${escapeShellArg u} 2>/dev/null)"; then
             /bin/launchctl kickstart -k "gui/''${uid}/${config.launchd.user.agents.link-nix-apps.serviceConfig.Label}" 2>/dev/null || true
           fi
         '')
