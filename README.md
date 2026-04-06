@@ -1,5 +1,9 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
+> [!IMPORTANT]
+> Bayt is a downstream fork of [hjem](https://github.com/feel-co/hjem).
+> Upstream deserves credit for the original design and implementation.
+
 <div id="doc-begin" align="center">
   <h1 id="header">
     <pre>Bayt [بَيْت]</pre>
@@ -94,10 +98,14 @@ may use to manage individual users' homes by leveraging the module system.
 
 ## Module Interface
 
+[already does!]: https://github.com/snugnug/hjem-rum
+
 The interface for the `bayt` module is conceptually very similar to prior art
 (e.g., Home Manager), but it does not act as a collection of modules like Home
 Manager. Instead, we implement minimal features, and leave
 application-specific abstractions to the user to do as they see fit.
+This, of course, does not mean that a module collection cannot exist.
+In fact, one [already does!]
 
 ```sh
 $ nix eval .#nixosConfigurations.test.config.bayt.users.alice.files.'".foo"' --json | jq
@@ -113,46 +121,6 @@ $ nix eval .#nixosConfigurations.test.config.bayt.users.alice.files.'".foo"' --j
   "value": null
 }
 ```
-
-### Standalone outputs
-
-For standalone evaluation, Bayt exposes helpers that return buildable outputs like `manifest` and `activationPackage`.
-A minimal downstream flake pattern is:
-
-```nix
-{
-  outputs = { self, nixpkgs, bayt, ... }: let
-    system = "x86_64-linux";
-    pkgs = import nixpkgs { inherit system; };
-  in {
-    baytConfigurations = bayt.lib.mkStandaloneConfigurations {
-      inherit system;
-      configurations.yousaf = {
-        inherit pkgs;
-        modules = [
-          {
-            home.username = "yousaf";
-            home.homeDirectory = "/home/yousaf";
-
-            bayt = {
-              linker = bayt.packages.${system}.smfh;
-              files.".zshrc".text = "export EDITOR=nvim";
-            };
-          }
-        ];
-      };
-    };
-  };
-}
-```
-
-This enables builds such as:
-
-```sh
-nix build .#baytConfigurations.yousaf.activationPackage
-```
-
-If you only need one standalone config, `bayt.lib.mkStandaloneConfiguration` and `bayt.lib.forSystem system.mkStandaloneConfiguration` are also available. `bayt.lib.mkConfiguration` remains the lower-level primitive when you want to assemble the module graph yourself.
 
 ### Linker Implementation
 
@@ -194,7 +162,7 @@ abstracting files into modules.
 
 [Gerg-l]: https://github.com/gerg-l
 
-Bayt previously utilized [systemd-tmpfiles] before switching to [smfh]
+Upstream hjem previously utilized [systemd-tmpfiles] before switching to [smfh]
 developed by [Gerg-l]. You can set `bayt.linker` to use a custom linker if desired.
 
 </details>
@@ -203,14 +171,31 @@ developed by [Gerg-l]. You can set `bayt.linker` to use a custom linker if desir
 
 [Nixpkgs]: https://github.com/nixOS/nixpkgs
 [Home Manager]: https://github.com/nix-community/home-manager
+[Hjem]: https://github.com/feel-co/hjem
+[Hjem Rum]: https://github.com/snugnug/hjem-rum
+[@Lunarnovaa]: https://github.com/lunarnovaa
+[@nezia1]: https://github.com/nezia1
+
+Bayt is a fork of [Hjem] by feel-co — thank you for the excellent foundation.
 
 Special thanks to [Nixpkgs] and [Home Manager]. The interface of the
 `bayt.users` module is inspired by Home Manager's `home.file` and Nixpkgs'
 `users.users` modules.
 
+<details>
+<summary>Hjem Rum — module collection for Hjem/Bayt</summary>
+
+[Hjem Rum], by [@Lunarnovaa] and [@nezia1], establishes a Home Manager-like
+module system for users less comfortable with manually linking files in place.
+If you want an easier interface on top of Bayt, take a look at Hjem Rum.
+
+</details>
+
 ## License
 
-This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+This project is a fork of [hjem](https://github.com/feel-co/hjem) by feel-co.
+The fork's primary license text is in [LICENSE](LICENSE). Upstream MPL-2.0
+license text is retained in [LICENSE-MPL](LICENSE-MPL).
 
 <div align="right">
   <a href="#doc-begin">Back to the Top</a>
